@@ -1,0 +1,292 @@
+return {
+  {
+    "folke/which-key.nvim",
+    init = function()
+      local hl_ns = vim.api.nvim_create_namespace("txtnote_hl")
+
+      vim.api.nvim_create_autocmd({ "BufRead", "BufNewFile" }, {
+        pattern = "*.txt",
+        callback = function(args)
+          vim.bo[args.buf].filetype = "txtnote"
+        end,
+      })
+
+      local function get_line(bufnr, lnum0)
+        return (vim.api.nvim_buf_get_lines(bufnr, lnum0, lnum0 + 1, false)[1] or "")
+      end
+
+      local function set_line(bufnr, lnum0, text)
+        vim.api.nvim_buf_set_lines(bufnr, lnum0, lnum0 + 1, false, { text })
+      end
+
+      local function parse_item(line)
+        local indent, marker, box = line:match("^(%s*)([-*+])%s+(%[[xX ]%])%s+")
+        if indent then
+          return {
+            indent = indent,
+            marker = marker,
+            has_box = true,
+            checked = (box:lower() == "[x]"),
+          }
+        end
+
+        indent, marker = line:match("^(%s*)([-*+])%s+")
+        if indent then
+          return {
+            indent = indent,
+            marker = marker,
+            has_box = false,
+            checked = false,
+          }
+        end
+
+        return nil
+      end
+
+      local function get_visual_range()
+        local s = vim.fn.getpos("'<")
+        local e = vim.fn.getpos("'>")
+        local sr, sc = s[2] - 1, s[3] - 1
+        local er, ec = e[2] - 1, e[3]
+        if sr > er or (sr == er and sc > ec) then
+          sr, er = er, sr
+          sc, ec = ec, sc
+        end
+        return vim.api.nvim_get_current_buf(), sr, sc, er, ec
+      end
+
+      local function insert_new_item(kind)
+        local bufnr = vim.api.nvim_get_current_buf()
+        local cursor = vim.api.nvim_win_get_cursor(0)
+        local row1 = cursor[1]
+        local lnum0 = row1 - 1
+
+        local line = get_line(bufnr, lnum0)
+        local info = parse_item(line)
+
+        local prefix = "- "
+        if kind == "checkbox" then
+          prefix = "- [ ] "
+        end
+
+        if info then
+          prefix = info.indent .. info.marker .. " "
+          if kind == "checkbox" or info.has_box then
+            prefix = info.indent .. info.marker .. " [ ] "
+          end
+        end
+
+        vim.api.nvim_buf_set_lines(bufnr, lnum0 + 1, lnum0 + 1, false, { prefix })
+        vim.api.nvim_win_set_cursor(0, { row1 + 1, #prefix })
+      end
+
+      local function toggle_checkbox()
+        local bufnr = vim.api.nvim_get_current_buf()
+        local row1 = vim.api.nvim_win_get_cursor(0)[1]
+        local lnum0 = row1 - 1
+        local line = get_line(bufnr, lnum0)
+
+        local info = parse_item(line)
+        if not info then
+          set_line(bufnr, lnum0, "- [ ] " .. line)
+          return
+        end
+
+        if not info.has_box then
+          local bullet_prefix = info.indent .. info.marker .. " "
+          local rest = line:sub(#bullet_prefix + 1)
+          set_line(bufnr, lnum0, info.indent .. info.marker .. " [ ] " .. rest)
+          return
+        end
+
+        local bullet_prefix = info.indent .. info.marker .. " "
+        local rest = line:sub(#bullet_prefix + 1)
+
+        if rest:sub(1, 3):lower() == "[x]" then
+          rest = "[ ]" .. rest:sub(4)
+        else
+          rest = "[x]" .. rest:sub(4)
+        end
+
+        set_line(bufnr, lnum0, bullet_prefix .. rest)
+      end
+
+      local function smart_cr()
+        local bufnr = vim.api.nvim_get_current_buf()
+        local cursor = vim.api.nvim_win_get_cursor(0)
+        local row1 = cursor[1]
+        local lnum0 = row1 - 1
+
+        local line = vim.api.nvim_get_current_line()
+        local info = parse_item(line)
+        if not info then
+          return "\n"
+        end
+
+        local prefix = info.indent .. info.marker .. " "
+        if info.has_box then
+          prefix = info.indent .. info.marker .. " [ ] "
+        end
+
+        local after = line:sub(#prefix + 1)
+        if after:match("^%s*$") then
+          set_line(bufnr, lnum0, info.indent)
+          return "\n"
+        end
+
+        return "\n" .. prefix
+      end
+
+      local function indent_range(delta_spaces, mode)
+        local bufnr = vim.api.nvim_get_current_buf()
+        local start_row0, end_row0
+
+        if mode == "visual" then
+          local _, sr, _, er, _ = get_visual_range()
+          start_row0, end_row0 = sr, er
+        else
+          local row1 = vim.api.nvim_win_get_cursor(0)[1]
+          start_row0, end_row0 = row1 - 1, row1 - 1
+        end
+
+        local lines = vim.api.nvim_buf_get_lines(bufnr, start_row0, end_row0 + 1, false)
+        local out = {}
+
+        for i, line in ipairs(lines) do
+          if parse_item(line) then
+            if delta_spaces > 0 then
+              out[i] = string.rep(" ", delta_spaces) .. line
+            else
+              local lead = line:match("^%s*") or ""
+              local drop = math.min(-delta_spaces, #lead)
+              out[i] = line:sub(drop + 1)
+            end
+          else
+            out[i] = line
+          end
+        end
+
+        vim.api.nvim_buf_set_lines(bufnr, start_row0, end_row0 + 1, false, out)
+      end
+
+      local function wrap_visual(wrapper)
+        local bufnr, sr, sc, er, ec = get_visual_range()
+        local text = vim.api.nvim_buf_get_text(bufnr, sr, sc, er, ec, {})
+        if #text == 0 then
+          return
+        end
+        text[1] = wrapper .. text[1]
+        text[#text] = text[#text] .. wrapper
+        vim.api.nvim_buf_set_text(bufnr, sr, sc, er, ec, text)
+      end
+
+      local function bold_word()
+        vim.cmd("normal! viw")
+        wrap_visual("**")
+      end
+
+      local function highlight_visual()
+        local bufnr, sr, sc, er, ec = get_visual_range()
+        vim.api.nvim_buf_clear_namespace(bufnr, hl_ns, 0, -1)
+
+        if sr == er then
+          vim.api.nvim_buf_add_highlight(bufnr, hl_ns, "Search", sr, sc, ec)
+          return
+        end
+
+        local first = vim.api.nvim_buf_get_lines(bufnr, sr, sr + 1, false)[1] or ""
+        vim.api.nvim_buf_add_highlight(bufnr, hl_ns, "Search", sr, sc, #first)
+
+        for r = sr + 1, er - 1 do
+          local l = vim.api.nvim_buf_get_lines(bufnr, r, r + 1, false)[1] or ""
+          vim.api.nvim_buf_add_highlight(bufnr, hl_ns, "Search", r, 0, #l)
+        end
+
+        vim.api.nvim_buf_add_highlight(bufnr, hl_ns, "Search", er, 0, ec)
+      end
+
+      local function clear_highlights()
+        local bufnr = vim.api.nvim_get_current_buf()
+        vim.api.nvim_buf_clear_namespace(bufnr, hl_ns, 0, -1)
+      end
+
+      local function change_font(delta)
+        if vim.g.neovide then
+          local cur = vim.g.neovide_scale_factor or 1.0
+          vim.g.neovide_scale_factor = cur + delta
+          return
+        end
+
+        local gf = vim.o.guifont
+        if gf and gf ~= "" then
+          local font, size = gf:match("^(.-):h(%d+)$")
+          if font and size then
+            local n = tonumber(size) or 12
+            local step = (delta > 0) and 1 or -1
+            n = math.max(6, n + step)
+            vim.o.guifont = font .. ":h" .. tostring(n)
+            return
+          end
+        end
+
+        vim.notify(
+          "I can only change font size in a GUI app (like Neovide). In a terminal, use your terminal font keys."
+        )
+      end
+
+      local function setup_buffer(bufnr)
+        vim.keymap.set("n", "<leader>tnb", function()
+          insert_new_item("bullet")
+        end, { buffer = bufnr, desc = "New bullet" })
+        vim.keymap.set("n", "<leader>tnc", function()
+          insert_new_item("checkbox")
+        end, { buffer = bufnr, desc = "New checkbox" })
+        vim.keymap.set("n", "<leader>tnt", toggle_checkbox, { buffer = bufnr, desc = "Toggle checkbox" })
+
+        vim.keymap.set("n", "<Tab>", function()
+          indent_range(2, "normal")
+        end, { buffer = bufnr, desc = "Nest bullet" })
+        vim.keymap.set("n", "<S-Tab>", function()
+          indent_range(-2, "normal")
+        end, { buffer = bufnr, desc = "Outdent bullet" })
+        vim.keymap.set("v", "<Tab>", function()
+          indent_range(2, "visual")
+        end, { buffer = bufnr, desc = "Nest bullet" })
+        vim.keymap.set("v", "<S-Tab>", function()
+          indent_range(-2, "visual")
+        end, { buffer = bufnr, desc = "Outdent bullet" })
+
+        vim.keymap.set("i", "<CR>", smart_cr, { buffer = bufnr, expr = true })
+
+        vim.keymap.set("n", "<leader>tns", bold_word, { buffer = bufnr, desc = "Bold word" })
+        vim.keymap.set("v", "<leader>tns", function()
+          wrap_visual("**")
+        end, { buffer = bufnr, desc = "Bold selection" })
+
+        vim.keymap.set("v", "<leader>tnh", highlight_visual, { buffer = bufnr, desc = "Highlight selection" })
+        vim.keymap.set("n", "<leader>tnH", clear_highlights, { buffer = bufnr, desc = "Clear highlight" })
+
+        vim.keymap.set("n", "<leader>tn+", function()
+          change_font(0.1)
+        end, { buffer = bufnr, desc = "Font bigger" })
+        vim.keymap.set("n", "<leader>tn-", function()
+          change_font(-0.1)
+        end, { buffer = bufnr, desc = "Font smaller" })
+      end
+
+      vim.api.nvim_create_autocmd("FileType", {
+        pattern = "txtnote",
+        callback = function(args)
+          setup_buffer(args.buf)
+        end,
+      })
+    end,
+    opts = function(_, opts)
+      local wk = require("which-key")
+      wk.add({
+        { "<leader>tn", group = "txt notes" },
+      })
+      return opts
+    end,
+  },
+}
