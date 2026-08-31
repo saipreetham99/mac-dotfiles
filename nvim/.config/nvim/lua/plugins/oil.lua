@@ -46,6 +46,19 @@ return {
         end,
       },
     },
+    config = function(_, opts)
+      local oil = require("oil")
+      oil.setup(opts)
+
+      local orig = oil.load_oil_buffer
+      oil.load_oil_buffer = function(bufnr)
+        bufnr = bufnr or vim.api.nvim_get_current_buf()
+        if vim.b[bufnr].oil_ready then
+          return
+        end
+        return orig(bufnr)
+      end
+    end,
     keys = {
       {
         "<leader>o",
