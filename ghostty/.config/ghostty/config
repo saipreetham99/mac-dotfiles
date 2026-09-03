@@ -25,7 +25,7 @@ window-save-state = always
 
 macos-titlebar-style = transparent
 
-background-opacity = 0.6
+background-opacity = 0.85
 
 background-blur = 20
 
