@@ -112,3 +112,5 @@ local function quick_preview()
 end
 
 vim.keymap.set("n", "<leader>p", quick_preview, { desc = "Quick Look preview" })
+vim.keymap.set("n", "q:", "<nop>", { silent = true })
+vim.api.nvim_create_user_command("Wq", "wq", {})
