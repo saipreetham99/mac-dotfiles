@@ -11,7 +11,7 @@ A personal Neovim setup built on [LazyVim](https://github.com/LazyVim/LazyVim), 
 - 💻 Floating terminal workflow (float / horizontal / vertical) via toggleterm
 - ⚡ [flash.nvim](https://github.com/folke/flash.nvim) for fast jump motions
 - ⇥ [tabout.nvim](https://github.com/abecodes/tabout.nvim) — `<Tab>` jumps past a closing bracket/quote instead of indenting
-- 🔍 Telescope tuned with split-open keymaps
+- 🔍 Telescope tuned with split-open keymaps, plus directory-only pickers by project root or recent files
 - 📄 VimTeX wired up for Skim (macOS PDF viewer)
 - 🧩 LazyVim extras for C/C++, Python, Dart, Docker, .NET, JSON, and LaTeX
 
@@ -47,6 +47,14 @@ Both calls run async via `vim.system` so nothing blocks input while a page rende
 
 ### Telescope
 Extra keymaps send the selected result straight to a horizontal or vertical split; Treesitter previews are disabled for snappier scrolling.
+
+### Directory Search
+Two extra pickers in `telescope.lua`, alongside LazyVim's own `<leader>ff`/`<leader>sg`:
+
+- `<leader>fd` — an `fd --type d` picker scoped to the git root of wherever you currently are (oil's directory, else the open file's directory, else Neovim's cwd, in that order — since `oil.open()` never changes Neovim's actual cwd). Excludes are an explicit, extensible table (`dir_excludes`, currently just `.git`) rather than relying on `fd`'s default hidden-file behavior.
+- `<leader>fD` — no `fd` call at all: builds a picker straight from the unique parent directories in `vim.v.oldfiles`, so it works even for directories outside the current project.
+
+Both open the selection in oil instead of telescope's normal "open this file" action, via `entry.path` (the absolute path telescope joins from its `cwd` option) rather than `entry[1]` (the raw, cwd-relative value) — using the relative one caused oil to open an empty, wrongly-resolved directory whenever the picker's `cwd` differed from Neovim's own.
 
 ### LaTeX
 VimTeX opens compiled PDFs in **Skim** (`vimtex_view_method = "skim"`) — macOS only, swap this out on other platforms.
@@ -121,6 +129,8 @@ Leader key is `<space>` (LazyVim default). Only custom mappings are listed below
 | `<leader>mv` | Normal | Play a video with mpv in a floating terminal |
 | `<leader>o` | Normal | Open oil.nvim with a vertical preview split |
 | `<leader>O` | Normal | Open oil.nvim in a floating window |
+| `<leader>fd` | Normal | Find Directory (project root), opens in oil |
+| `<leader>fD` | Normal | Find Recent Directory (from oldfiles), opens in oil |
 | `]p` / `[p` | Normal (PDF buffer) | Next / previous PDF page |
 | `r` | Normal (PDF buffer) | Redraw current PDF page |
 | `<Tab>` / `<S-Tab>` | Insert (inside brackets/quotes) | Tab out via tabout.nvim |
