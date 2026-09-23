@@ -114,3 +114,9 @@ end
 vim.keymap.set("n", "<leader>p", quick_preview, { desc = "Quick Look preview" })
 vim.keymap.set("n", "q:", "<nop>", { silent = true })
 vim.api.nvim_create_user_command("Wq", "wq", {})
+
+-- Cmd+A: copy the entire current buffer to the system clipboard
+vim.keymap.set({ "n", "i", "v" }, "<D-a>", function()
+  vim.cmd("silent %yank +")
+  vim.notify("Copied " .. vim.fn.line("$") .. " lines", vim.log.levels.INFO)
+end, { desc = "Copy whole file to clipboard" })

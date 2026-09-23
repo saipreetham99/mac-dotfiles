@@ -8,7 +8,7 @@ Personal dotfiles managed with [GNU Stow](https://www.gnu.org/software/stow/) �
 | -------- | --------------------------------------------------------------- | -------------------------------------------------------- |
 | `zsh`    | `~/.zshrc`, `~/themes.json`                                    | zsh config + oh-my-posh theme                           |
 | `nvim`   | `~/.config/nvim`                                               | LazyVim-based Neovim config                             |
-| `ghostty`| `~/.config/ghostty/config`                                     | Config only — `config.bak` stays local, not tracked     |
+| `ghostty`| `~/.config/ghostty/config`                                     | Config only — see [Ghostty](#ghostty) below             |
 | `nchat`  | `~/.config/nchat/{app,color,key,ui}.conf`, `nchat-pick.sh`      | Settings only — see [Nchat](#nchat) below               |
 
 ## Requirements
@@ -43,6 +43,18 @@ Stow won't link over a real file or folder, so anything already sitting at those
 The four zsh plugins referenced in `.zshrc` (`zsh-autosuggestions`, `zsh-history-substring-search`, `zsh-vi-mode`, `fast-syntax-highlighting`) aren't vendored in this repo and don't need a plugin manager — a small `_zplugin_load` helper clones each one straight from GitHub into `~/.config/zsh/plugins` the first time a new shell starts, then sources it. Nothing to install up front beyond the tools listed above.
 
 Run `zplugin-update` any time to `git pull --ff-only` every cloned plugin.
+
+## Ghostty
+
+`config.bak` stays local and isn't tracked.
+
+One keybind exists purely for Neovim:
+
+```
+keybind = cmd+a=csi:97;9u
+```
+
+Ghostty binds `Cmd+A` to its own select-all by default and never forwards the key, so this line replaces that and sends it to Neovim as `<D-a>`, where it copies the whole current file to the clipboard. Because Ghostty keybinds are global, `Cmd+A` no longer selects the screen at a plain shell prompt.
 
 ## Nchat
 

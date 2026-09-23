@@ -197,3 +197,10 @@ _zplugin_load zdharma-continuum fast-syntax-highlighting
 
 export VIRTUAL_ENV_DISABLE_PROMPT=1
 eval "$(oh-my-posh init zsh --config ~/themes.json)"
+# The following lines have been added by Docker Desktop to enable Docker CLI completions.
+fpath=(/Users/siva/.docker/completions $fpath)
+autoload -Uz compinit
+(( ${+_comps[docker]} )) || compinit
+# End of Docker CLI completions
+export JAVA_HOME=$(/usr/libexec/java_home -v21)
+export PATH="/opt/homebrew/opt/libpq/bin:$PATH"

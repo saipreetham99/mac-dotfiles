@@ -11,6 +11,7 @@ A personal Neovim setup built on [LazyVim](https://github.com/LazyVim/LazyVim), 
 - 💻 Floating terminal workflow (float / horizontal / vertical) via toggleterm
 - ⚡ [flash.nvim](https://github.com/folke/flash.nvim) for fast jump motions
 - ⇥ [tabout.nvim](https://github.com/abecodes/tabout.nvim) — `<Tab>` jumps past a closing bracket/quote instead of indenting
+- 📋 `Cmd+A` copies the whole current file to the system clipboard
 - 🔍 Telescope tuned with split-open keymaps, plus directory-only pickers by project root or recent files
 - 📄 VimTeX wired up for Skim (macOS PDF viewer)
 - 🧩 LazyVim extras for C/C++, Python, Dart, Docker, .NET, JSON, and LaTeX
@@ -38,6 +39,17 @@ Both calls run async via `vim.system` so nothing blocks input while a page rende
 
 ### Tab Navigation
 [tabout.nvim](https://github.com/abecodes/tabout.nvim) makes `<Tab>` jump past a closing `'`, `"`, `` ` ``, `)`, `]`, or `}` instead of inserting a literal tab or indenting (`<S-Tab>` does the same backwards). Loaded eagerly, not lazy, with high priority so it attaches before completion's own `<Tab>` mapping.
+
+### Copy Whole File
+`Cmd+A` (`<D-a>`) yanks the entire current buffer into the system clipboard (`%yank +`) without moving the cursor, from normal, insert, or visual mode.
+
+This needs one line in Ghostty's config, since Ghostty binds `Cmd+A` to its own select-all by default and never forwards the key:
+
+```
+keybind = cmd+a=csi:97;9u
+```
+
+That makes Ghostty send the key to Neovim as `<D-a>`. The catch is that it applies to all of Ghostty, so `Cmd+A` no longer selects the screen at a plain shell prompt.
 
 ### Terminal
 [toggleterm.nvim](https://github.com/akinsho/toggleterm.nvim) runs in three flavors — floating, horizontal, vertical — each on its own keymap, with terminal-mode mappings for window navigation and closing without killing the job.
@@ -93,7 +105,7 @@ On first launch, `lazy.nvim` bootstraps itself and installs every plugin pinned 
 ├── lua/
 │   ├── config/
 │   │   ├── autocmds.lua     # custom autocommands (LazyVim defaults only)
-│   │   ├── keymaps.lua      # hjkl-only nav, quick preview, mpv playback
+│   │   ├── keymaps.lua      # hjkl-only nav, quick preview, mpv playback, Cmd+A copy
 │   │   ├── lazy.lua         # lazy.nvim bootstrap + setup
 │   │   └── options.lua      # custom options (LazyVim defaults only)
 │   └── plugins/
@@ -111,9 +123,9 @@ On first launch, `lazy.nvim` bootstraps itself and installs every plugin pinned 
 │       └── tokyonight.lua
 ├── init.lua                 # entry point — loads config.lazy
 ├── lazy-lock.json           # pinned plugin commits
-├── lazyvim.json              # enabled LazyVim extras
-├── stylua.toml               # Lua formatter settings
-└── .neoconf.json              # lua_ls settings for editing this config
+├── lazyvim.json             # enabled LazyVim extras
+├── stylua.toml              # Lua formatter settings
+└── .neoconf.json            # lua_ls settings for editing this config
 ```
 
 ## Keymaps
@@ -124,6 +136,7 @@ Leader key is `<space>` (LazyVim default). Only custom mappings are listed below
 |---|---|---|
 | `<Up>` `<Down>` `<Left>` `<Right>` | Normal | Disabled — forces `hjkl` |
 | `o` | Normal | Open line below; skips auto-comment insertion on the last line |
+| `<D-a>` (`Cmd+A`) | Normal/Insert/Visual | Copy the whole current file to the system clipboard |
 | `<leader>p` | Normal | Quick preview: images float, videos play via mpv |
 | `q` | Normal (preview window) | Close the image preview window |
 | `<leader>mv` | Normal | Play a video with mpv in a floating terminal |

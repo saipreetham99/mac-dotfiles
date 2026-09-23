@@ -30,3 +30,5 @@ background-opacity = 0.85
 background-blur = 20
 
 keybind = cmd+shift+backslash=new_split:right
+
+keybind = cmd+a=csi:97;9u
