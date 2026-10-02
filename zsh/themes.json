@@ -101,6 +101,25 @@
         }
       ],
       "type": "prompt"
+    },
+    {
+      "type": "rprompt",
+      "segments": [
+        {
+          "background": "#306998",
+          "foreground": "#FFD43B",
+          "leading_diamond": "\ue0c5",
+          "options": {
+            "display_mode": "environment",
+            "fetch_virtual_env": true,
+            "home_enabled": true
+          },
+          "style": "diamond",
+          "template": " \ue235 {{ if .Venv }}({{ .Venv }}) {{ end }}<#ffffff>{{ .Full }}</> ",
+          "type": "python",
+          "trailing_diamond": "\ue0b4"
+        }
+      ]
     }
   ],
   "console_title_template": "{{if .Root}}(Admin) {{end}}{{.Folder}}",
