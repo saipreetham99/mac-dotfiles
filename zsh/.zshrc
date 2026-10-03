@@ -204,3 +204,4 @@ autoload -Uz compinit
 # End of Docker CLI completions
 export JAVA_HOME=$(/usr/libexec/java_home -v21)
 export PATH="/opt/homebrew/opt/libpq/bin:$PATH"
+alias csvlens='csvlens -d ,'
