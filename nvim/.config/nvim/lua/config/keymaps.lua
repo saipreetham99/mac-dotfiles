@@ -114,6 +114,7 @@ end
 vim.keymap.set("n", "<leader>p", quick_preview, { desc = "Quick Look preview" })
 vim.keymap.set("n", "q:", "<nop>", { silent = true })
 vim.api.nvim_create_user_command("Wq", "wq", {})
+vim.api.nvim_create_user_command("W", "w<bang> <args>", { bang = true, nargs = "*", complete = "file" })
 
 -- Cmd+A: copy the entire current buffer to the system clipboard
 vim.keymap.set({ "n", "i", "v" }, "<D-a>", function()

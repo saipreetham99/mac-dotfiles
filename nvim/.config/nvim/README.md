@@ -1,6 +1,6 @@
 # 💤 LazyVim Config
 
-A personal Neovim setup built on [LazyVim](https://github.com/LazyVim/LazyVim), tuned for inline image/video/PDF preview, a fast floating-terminal workflow, and multi-language development (C/C++, Python, Dart, Docker, .NET, LaTeX).
+A personal Neovim setup built on [LazyVim](https://github.com/LazyVim/LazyVim), tuned for inline image/video/PDF preview, a fast floating-terminal workflow, and multi-language development (C/C++, Java, Python, Dart, Docker, .NET, LaTeX).
 
 ## Features
 
@@ -14,7 +14,8 @@ A personal Neovim setup built on [LazyVim](https://github.com/LazyVim/LazyVim), 
 - 📋 `Cmd+A` copies the whole current file to the system clipboard
 - 🔍 Telescope tuned with split-open keymaps, plus directory-only pickers by project root or recent files
 - 📄 VimTeX wired up for Skim (macOS PDF viewer)
-- 🧩 LazyVim extras for C/C++, Python, Dart, Docker, .NET, JSON, and LaTeX
+- ☕ Java via jdtls, tuned for cleaner completion, library Javadoc, and decompiled sources
+- 🧩 LazyVim extras for C/C++, Java, Python, Dart, Docker, .NET, JSON, and LaTeX
 
 ## Notable Configuration
 
@@ -68,6 +69,36 @@ Two extra pickers in `telescope.lua`, alongside LazyVim's own `<leader>ff`/`<lea
 
 Both open the selection in oil instead of telescope's normal "open this file" action, via `entry.path` (the absolute path telescope joins from its `cwd` option) rather than `entry[1]` (the raw, cwd-relative value) — using the relative one caused oil to open an empty, wrongly-resolved directory whenever the picker's `cwd` differed from Neovim's own.
 
+### Java
+Java runs on LazyVim's `lang.java` extra, which already does the hard parts: [nvim-jdtls](https://github.com/mfussenegger/nvim-jdtls) is started from a `FileType` autocmd (not a lazy `config` function or `ftplugin/`), so jumping into a class from another project attaches a client for that project too, while `start_or_attach` reuses the existing client when the root matches. mason-lspconfig is told not to start `jdtls` itself (`setup.jdtls` returns `true`), so there's never a duplicate server. Mason installs `jdtls`, `java-debug-adapter`, and `java-test`; Lombok is loaded as a `-javaagent`, and each project gets its own workspace under `~/.cache/nvim/jdtls/<project>/`.
+
+Don't add a separate `after/plugin` or `ftplugin/java.lua` that calls `start_or_attach`. It would start a second client next to LazyVim's. jdtls needs **Java 21+** on `PATH`.
+
+`java.lua` layers extra settings on top of the extra (lazy.nvim deep-merges them, so the extra's own config stays intact):
+
+| Setting | Effect |
+|---|---|
+| `completion.filteredTypes` | Hides `java.awt.*`, `com.sun.*`, `sun.*`, `jdk.*` from completion and auto-import, so `List` resolves to `java.util.List` |
+| `completion.favoriteStaticMembers` | Suggests JUnit / Mockito / `Collectors` / `Objects` statics and adds the static import |
+| `completion.importOrder` | `java`, `javax`, `jakarta`, `org`, `com`, then everything else |
+| `maven` / `eclipse.downloadSources` | Downloads library sources, so hover and completion docs show real Javadoc |
+| `contentProvider.preferred = "fernflower"` | Go-to-definition into a jar without sources opens decompiled code |
+| `references.includeDecompiledSources` | Find-references also searches decompiled classes |
+| `sources.organizeImports.starThreshold = 9999` | `<leader>co` never collapses imports into `import java.util.*` |
+| `signatureHelp` | Parameter docs while typing call arguments |
+| `configuration.updateBuildConfiguration = "automatic"` | `pom.xml` / `build.gradle` changes re-import without a prompt |
+| `codeGeneration` | Generated code uses braces on every `if`, and a compact `toString` template |
+
+It also turns on blink.cmp's `signature` popup, which applies to **every** language, not just Java.
+
+Useful bits that come with the extra:
+
+- `<leader>ca` on a class: jdtls code actions to generate getters/setters, constructors, `equals`/`hashCode`, `toString`, or implement missing methods
+- `<leader>co` organize imports, `<leader>cxv` / `<leader>cxc` extract variable / constant (visual mode adds `<leader>cxm` extract method), `<leader>cgs` go to super
+- `<leader>tt` / `<leader>tr` / `<leader>tT` run all / nearest / picked test. These are buffer-local, so **in Java buffers `<leader>tt` runs tests instead of toggling the floating terminal**; use `<leader>th` / `<leader>tv` there
+- `:JdtWipeDataAndRestart` (or deleting the project's folder under `~/.cache/nvim/jdtls/`) fixes completion that's gone stale after big build changes
+- Large projects: pass `--jvm-arg=-Xmx4g` through the extra's `opts.cmd` for more heap, and set `dap_main = false` to skip the main-class scan on every attach
+
 ### LaTeX
 VimTeX opens compiled PDFs in **Skim** (`vimtex_view_method = "skim"`) — macOS only, swap this out on other platforms.
 
@@ -84,7 +115,7 @@ VimTeX opens compiled PDFs in **Skim** (`vimtex_view_method = "skim"`) — macOS
 - **mpv** — powers the video-preview keymaps
 - **Skim.app** (macOS) — PDF viewer for VimTeX
 
-Mason installs the language servers, formatters, and debug adapters for the enabled extras (clangd, Python tools, Dart, Docker, OmniSharp, texlab, etc.) automatically on first launch.
+Mason installs the language servers, formatters, and debug adapters for the enabled extras (clangd, jdtls, Python tools, Dart, Docker, OmniSharp, texlab, etc.) automatically on first launch.
 
 ## Installation
 
@@ -115,6 +146,7 @@ On first launch, `lazy.nvim` bootstraps itself and installs every plugin pinned 
 │       ├── flash.lua
 │       ├── focal.lua
 │       ├── image.lua
+│       ├── java.lua         # extra jdtls settings on top of lang.java
 │       ├── oil.lua
 │       ├── pdf.lua          # inline PDF viewer (pdftoppm/pdfinfo + image.nvim)
 │       ├── tabout.lua
@@ -192,6 +224,7 @@ The rest of `lazy-lock.json` — completion, git signs, formatting/linting, whic
 | `lang.dart` | Dart |
 | `lang.docker` | Dockerfile |
 | `lang.dotnet` | .NET / C# (OmniSharp) |
+| `lang.java` | Java ([nvim-jdtls](https://github.com/mfussenegger/nvim-jdtls), Lombok, debug + test bundles) |
 | `lang.json` | JSON, with schema support |
 | `lang.python` | Python |
 | `lang.tex` | LaTeX tooling (texlab) |
