@@ -41,6 +41,7 @@ return {
             webp = true,
             bmp = true,
             svg = true,
+            class = true,
           }
           return ext ~= nil and image_exts[ext:lower()] == true
         end,
