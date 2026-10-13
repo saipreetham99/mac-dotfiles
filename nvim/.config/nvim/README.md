@@ -9,6 +9,7 @@ A personal Neovim setup built on [LazyVim](https://github.com/LazyVim/LazyVim), 
 - 🖼️ Inline image preview and video playback, from the explorer or the file under your cursor
 - 📖 Inline PDF viewer — pages rendered right in the buffer, from the terminal or oil
 - 💻 Floating terminal workflow (float / horizontal / vertical) via toggleterm
+- ▶ Clickable Run button and `<F5>` / `<leader>rr` for C++, Java, Python in the existing bottom terminal
 - ⚡ [flash.nvim](https://github.com/folke/flash.nvim) for fast jump motions
 - ⇥ [tabout.nvim](https://github.com/abecodes/tabout.nvim) — `<Tab>` jumps past a closing bracket/quote instead of indenting
 - 📋 `Cmd+A` copies the whole current file to the system clipboard
@@ -54,6 +55,16 @@ That makes Ghostty send the key to Neovim as `<D-a>`. The catch is that it appli
 
 ### Terminal
 [toggleterm.nvim](https://github.com/akinsho/toggleterm.nvim) runs in three flavors — floating, horizontal, vertical — each on its own keymap, with terminal-mode mappings for window navigation and closing without killing the job.
+
+### Run current file
+
+For a C++, Java, or Python file, click **▶ Run** in Lualine (the bottom statusline), press **`F5`** / **`<Space>rr`**, or enter **`:RunCode`**. The current file is saved automatically and sent to the **existing** horizontal `<leader>th` terminal (the same `hsplit_term`, at height 15), not a new terminal. That terminal stays open for output and interactive stdin. `<F5>` also re-runs the most recently launched source file while you are focused in this horizontal terminal. Starting a run sends Ctrl-C to interrupt a previous command or program in that shared terminal. `<leader>th` still hides/shows the same window and keeps its shell alive.
+
+- **C++**: `clang++` (fallback: `g++`) with `-std=c++20 -Wall -Wextra`, then execute only if compilation succeeds. Binary is stored under `stdpath('cache')/run-code/`, not next to the source file.
+- **Java**: `java YourFile.java` (JDK 11+ source-file mode); ideal for single-file exercises. Maven/Gradle/multi-file projects require their own build commands.
+- **Python**: `python3 -u YourFile.py` using `python3` from the shell's `PATH` (activate the intended virtual environment before starting Neovim if needed).
+
+The runner sets the command's working directory to the source file's folder, escapes spaces/shell-sensitive characters in paths, and displays compiler errors or program output directly in the terminal. No new plugin required. The clickable button requires mouse events in your terminal emulator (the config enables `mouse=a`).
 
 ### Motions & Search
 [flash.nvim](https://github.com/folke/flash.nvim) is wired into normal/visual/operator-pending modes for both regular and Treesitter-based jumps, toggleable from the command line.
@@ -109,6 +120,7 @@ VimTeX opens compiled PDFs in **Skim** (`vimtex_view_method = "skim"`) — macOS
 - A **Nerd Font**, set as your terminal font (icons in bufferline, oil, Telescope, statusline)
 - **ripgrep** and **fd** — Telescope live grep / file finding
 - A **C compiler** and **make** — Treesitter parsers and `telescope-fzf-native`
+- For Run Code: **`clang++` or `g++`** (C++20), **JDK 11+** (Java source-file launcher), and **`python3`** for the respective languages
 - **kitty**, or another terminal supporting the kitty graphics protocol (Ghostty, WezTerm, etc.) — required by image.nvim's `kitty` backend
 - **ImageMagick** (`magick` CLI) — required by image.nvim's `magick_cli` processor
 - **poppler** (`pdftoppm` + `pdfinfo`) — `brew install poppler` — powers the inline PDF viewer
@@ -149,9 +161,10 @@ On first launch, `lazy.nvim` bootstraps itself and installs every plugin pinned 
 │       ├── java.lua         # extra jdtls settings on top of lang.java
 │       ├── oil.lua
 │       ├── pdf.lua          # inline PDF viewer (pdftoppm/pdfinfo + image.nvim)
+│       ├── run-button.lua   # clickable ▶ Run Lualine component
 │       ├── tabout.lua
 │       ├── telescope.lua
-│       ├── terminal.lua
+│       ├── terminal.lua     # existing terminal + F5 / <leader>rr + :RunCode
 │       └── tokyonight.lua
 ├── init.lua                 # entry point — loads config.lazy
 ├── lazy-lock.json           # pinned plugin commits
@@ -187,6 +200,10 @@ Leader key is `<space>` (LazyVim default). Only custom mappings are listed below
 | `<C-s>` / `<C-v>` | Telescope (insert/normal) | Open selection in a horizontal / vertical split |
 | `<leader>tt` | Normal | Toggle floating terminal |
 | `<leader>th` | Normal | Toggle horizontal terminal |
+| `<F5>` / `<leader>rr` | Normal (source buffer) | Save and run C++ / Java / Python in the same horizontal terminal |
+| `<F5>` | Terminal/Normal (horizontal terminal only) | Interrupt and re-run the last source file |
+| Click `▶ Run` | Lualine statusline | Run current supported source file (mouse required) |
+| `:RunCode` | Command | Run current supported source file |
 | `<leader>tv` | Normal | Toggle vertical terminal |
 | `<esc>` | Terminal | Back to Normal mode |
 | `<C-h/j/k/l>` | Terminal | Move to the window left/below/above/right |

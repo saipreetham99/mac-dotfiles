@@ -121,3 +121,12 @@ vim.keymap.set({ "n", "i", "v" }, "<D-a>", function()
   vim.cmd("silent %yank +")
   vim.notify("Copied " .. vim.fn.line("$") .. " lines", vim.log.levels.INFO)
 end, { desc = "Copy whole file to clipboard" })
+
+-- Run C++, Java, or Python using LazyVim's Ctrl+/ Snacks bottom terminal.
+-- Register outside toggleterm so the runner doesn't depend on that plugin.
+vim.keymap.set("n", "<leader>rr", function()
+  require("config.run_code").run()
+end, { desc = "Run current code (Ctrl+/ terminal)", silent = true })
+vim.api.nvim_create_user_command("RunCode", function()
+  require("config.run_code").run()
+end, { desc = "Run C++ / Java / Python in Ctrl+/ terminal" })
