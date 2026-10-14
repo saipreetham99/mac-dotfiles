@@ -71,9 +71,9 @@ return {
       {
         "<leader>O",
         function()
-          require("oil").open_float()
+          require("oil").open(vim.fn.getcwd())
         end,
-        desc = "Oil float",
+        desc = "Oil CWD",
       },
     },
   },
