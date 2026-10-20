@@ -26,9 +26,9 @@ export GPG_TTY=$(tty)
 # =========================================================
 
 export PATH="/opt/homebrew/opt/python@3.13/libexec/bin:$PATH"
-export PATH="$PATH:/Users/siva/.local/bin"   # pipx
+export PATH="$PATH:$HOME/.local/bin"   # pipx
 export PATH="$HOME/Library/Android/sdk/platform-tools:$PATH"
-export PATH="/Users/siva/.antigravity-ide/antigravity-ide/bin:$PATH"
+export PATH="$HOME/.antigravity-ide/antigravity-ide/bin:$PATH"
 
 # NOTE: both llvm@22 and plain llvm were on your PATH; the last line wins.
 # LDFLAGS/CPPFLAGS below point at llvm@22 — drop whichever you don't want.
@@ -197,11 +197,6 @@ _zplugin_load zdharma-continuum fast-syntax-highlighting
 
 export VIRTUAL_ENV_DISABLE_PROMPT=1
 eval "$(oh-my-posh init zsh --config ~/themes.json)"
-# The following lines have been added by Docker Desktop to enable Docker CLI completions.
-fpath=(/Users/siva/.docker/completions $fpath)
-autoload -Uz compinit
-(( ${+_comps[docker]} )) || compinit
-# End of Docker CLI completions
 export JAVA_HOME=$(/usr/libexec/java_home -v21)
 export PATH="/opt/homebrew/opt/libpq/bin:$PATH"
 alias csvlens='csvlens -d ,'

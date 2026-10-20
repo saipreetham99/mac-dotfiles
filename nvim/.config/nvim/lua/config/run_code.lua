@@ -156,31 +156,62 @@ local function runner_command(file, filetype)
       return nil, "Run Code: cannot create " .. build_dir
     end
     local binary = build_dir .. "/" .. vim.fn.sha256(file):sub(1, 16)
-    return prefix .. compiler .. " -std=c++20 -Wall -Wextra " .. quote(file) .. " -o " .. quote(binary) .. " && " .. quote(binary)
+    return prefix .. compiler .. " -std=c++17 -Wall -Wextra " .. quote(file) .. " -o " .. quote(binary) .. " && " .. quote(binary)
   end
 
   if filetype == "java" then
-    if vim.fn.executable("java") == 0 or vim.fn.executable("javac") == 0 then
-      return nil, "Run Code: install a JDK and put java and javac on PATH"
+    if vim.fn.executable("java") == 0 then
+      return nil, "Run Code: install a JDK and put java on PATH"
     end
 
-    -- A Java filename does not necessarily name its entry class. In practice
-    -- exercises often have filenames like 20StreamAPI.java -> class StreamAPI.
     local main_class, main_error = java_main_class(file)
     if not main_class then
       return nil, main_error
     end
 
-    -- Store compiled classes in Neovim's cache, not the source folder.
-    local build_dir = vim.fn.stdpath("cache") .. "/run-code/java/" .. vim.fn.sha256(file):sub(1, 16)
+    -- Maven / Gradle projects: use the build tool instead of raw javac.
+    -- Spring Boot gets its own goal/task; plain projects use exec:java.
+    local project_root = vim.fs.root(file, { "pom.xml", "build.gradle", "build.gradle.kts" })
+    if project_root then
+      local qroot = quote(project_root)
+      local pom = project_root .. "/pom.xml"
+      if vim.fn.filereadable(pom) == 1 then
+        local mvn = vim.fn.filereadable(project_root .. "/mvnw") == 1 and "./mvnw" or "mvn"
+        local content = table.concat(vim.fn.readfile(pom), "\n")
+        if content:find("spring-boot", 1, true) then
+          return "cd " .. qroot .. " && " .. mvn .. " spring-boot:run"
+        end
+        return "cd " .. qroot .. " && " .. mvn .. " -q compile exec:java -Dexec.mainClass=" .. quote(main_class)
+      end
+      local gradle_file = project_root .. "/build.gradle"
+      if vim.fn.filereadable(gradle_file) == 0 then
+        gradle_file = project_root .. "/build.gradle.kts"
+      end
+      local gradle = vim.fn.filereadable(project_root .. "/gradlew") == 1 and "./gradlew" or "gradle"
+      local content = table.concat(vim.fn.readfile(gradle_file), "\n")
+      if content:find("spring-boot", 1, true) then
+        return "cd " .. qroot .. " && " .. gradle .. " bootRun"
+      end
+      return "cd " .. qroot .. " && " .. gradle .. " -q run"
+    end
+
+    -- Plain Java: compile all .java files in the directory so cross-file
+    -- references resolve (e.g. App.java using Alien.java).
+    if vim.fn.executable("javac") == 0 then
+      return nil, "Run Code: install a JDK and put javac on PATH"
+    end
+
+    local build_dir = vim.fn.stdpath("cache") .. "/run-code/java/" .. vim.fn.sha256(dir):sub(1, 16)
     local ok = pcall(vim.fn.mkdir, build_dir, "p")
     if not ok or vim.fn.isdirectory(build_dir) == 0 then
       return nil, "Run Code: cannot create " .. build_dir
     end
 
     local classpath = build_dir .. (vim.fn.has("win32") == 1 and ";" or ":") .. dir
+    local javac_base = "javac -d " .. quote(build_dir) .. " -cp " .. quote(classpath)
     return prefix
-      .. "javac -d " .. quote(build_dir) .. " -cp " .. quote(classpath) .. " " .. quote(file)
+      .. "(" .. javac_base .. " " .. quote(file) .. " 2>/dev/null"
+      .. " || " .. javac_base .. " " .. quote(dir) .. "/*.java)"
       .. " && java -cp " .. quote(classpath) .. " " .. quote(main_class)
   end
 
