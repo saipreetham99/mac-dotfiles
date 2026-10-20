@@ -25,6 +25,7 @@ return {
               return i
             end
           end
+          return 1
         elseif ft == "cpp" then
           for i, line in ipairs(lines) do
             if line:match("^%s*int%s+main%s*%(") then
