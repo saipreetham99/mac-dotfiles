@@ -200,3 +200,4 @@ eval "$(oh-my-posh init zsh --config ~/themes.json)"
 export JAVA_HOME=$(/usr/libexec/java_home -v21)
 export PATH="/opt/homebrew/opt/libpq/bin:$PATH"
 alias csvlens='csvlens -d ,'
+export PATH=/opt/homebrew/opt/llvm@22/bin:$PATH
