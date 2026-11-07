@@ -48,3 +48,6 @@ vim.api.nvim_create_autocmd("ColorScheme", {
 --     Snacks.dim.enable()
 --   end,
 -- })
+
+-- Clickable "Load Maven Changes" winbar button after saving pom.xml.
+require("config.maven_reload")

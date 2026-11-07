@@ -137,6 +137,12 @@ local function java_main_class(file)
   return (package_name ~= "" and (package_name .. ".") or "") .. selected
 end
 
+-- Maven and Gradle both keep test sources under src/test/, compiled to a
+-- different output directory than main sources.
+local function in_test_sources(file)
+  return vim.fn.fnamemodify(file, ":p"):find("/src/test/", 1, true) ~= nil
+end
+
 local function runner_command(file, filetype)
   local quote = vim.fn.shellescape
   local dir = vim.fn.fnamemodify(file, ":h")
@@ -156,7 +162,27 @@ local function runner_command(file, filetype)
       return nil, "Run Code: cannot create " .. build_dir
     end
     local binary = build_dir .. "/" .. vim.fn.sha256(file):sub(1, 16)
-    return prefix .. compiler .. " -std=c++17 -Wall -Wextra " .. quote(file) .. " -o " .. quote(binary) .. " && " .. quote(binary)
+
+    -- Compiling the buffer alone fails to link as soon as it calls into a
+    -- sibling translation unit (arena_test.cpp using arena.cpp). Add the
+    -- other sources in the directory, skipping any that define their own
+    -- main() so unrelated single-file exercises stay independent.
+    local sources, seen = { quote(file) }, { [vim.fn.fnamemodify(file, ":p")] = true }
+    for _, pattern in ipairs({ "/*.cpp", "/*.cc", "/*.cxx" }) do
+      for _, sibling in ipairs(vim.fn.glob(dir .. pattern, false, true)) do
+        local full = vim.fn.fnamemodify(sibling, ":p")
+        if not seen[full] then
+          seen[full] = true
+          local readable, lines = pcall(vim.fn.readfile, sibling)
+          local text = readable and table.concat(lines, "\n") or "int main("
+          if not text:find("int%s+main%s*%(") then
+            sources[#sources + 1] = quote(sibling)
+          end
+        end
+      end
+    end
+
+    return prefix .. compiler .. " -std=c++17 -Wall -Wextra " .. table.concat(sources, " ") .. " -o " .. quote(binary) .. " && " .. quote(binary)
   end
 
   if filetype == "java" then
@@ -180,6 +206,14 @@ local function runner_command(file, filetype)
         local content = table.concat(vim.fn.readfile(pom), "\n")
         if content:find("spring-boot", 1, true) then
           return "cd " .. qroot .. " && " .. mvn .. " spring-boot:run"
+        end
+        -- Classes under src/test/java land in target/test-classes, which
+        -- the default runtime scope excludes: `compile` never builds them
+        -- and exec:java then dies with ClassNotFoundException. Build and
+        -- run those against the test scope instead.
+        if in_test_sources(file) then
+          return "cd " .. qroot .. " && " .. mvn .. " -q test-compile exec:java"
+            .. " -Dexec.classpathScope=test -Dexec.mainClass=" .. quote(main_class)
         end
         return "cd " .. qroot .. " && " .. mvn .. " -q compile exec:java -Dexec.mainClass=" .. quote(main_class)
       end
