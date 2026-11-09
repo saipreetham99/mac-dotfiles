@@ -80,10 +80,17 @@ return {
         end
       end
 
+      -- TestNG/JUnit ▶ Run | Debug buttons share the click handler below.
+      local test_runner = require("config.test_runner")
+      test_runner.setup()
+
       -- Click the ▶ sign or the virtual "Run" line to run.
       vim.opt.mouse:append("a")
       vim.keymap.set("n", "<LeftMouse>", function()
         local pos = vim.fn.getmousepos()
+        if test_runner.click(pos) then
+          return
+        end
         local bufnr = vim.fn.winbufnr(pos.winid)
         if bufnr ~= -1 and supported[vim.bo[bufnr].filetype] then
           local marks = vim.api.nvim_buf_get_extmarks(bufnr, ns, 0, -1, {})

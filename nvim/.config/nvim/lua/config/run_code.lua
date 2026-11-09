@@ -311,6 +311,14 @@ function M.run()
     return LazyVim.root()
   end)
 
+  if M.send(command, root) then
+    last_source_buffer = bufnr
+  end
+end
+
+-- Send a shell command to the Ctrl+/ terminal, opening it if needed.
+-- Returns the Snacks terminal, or nil if it couldn't be reached.
+function M.send(command, root)
   if not Snacks or not Snacks.terminal then
     vim.notify("Run Code: LazyVim's Snacks terminal is unavailable", vim.log.levels.ERROR)
     return
@@ -336,8 +344,6 @@ function M.run()
     return
   end
 
-  last_source_buffer = bufnr
-
   local function send_command()
     if vim.api.nvim_buf_is_valid(term.buf) and vim.b[term.buf].terminal_job_id == channel then
       vim.api.nvim_chan_send(channel, command .. "\n")
@@ -353,6 +359,7 @@ function M.run()
     vim.api.nvim_chan_send(channel, "\003")
     vim.defer_fn(send_command, 100)
   end
+  return term
 end
 
 return M
