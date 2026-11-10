@@ -51,3 +51,27 @@ vim.api.nvim_create_autocmd("ColorScheme", {
 
 -- Clickable "Load Maven Changes" winbar button after saving pom.xml.
 require("config.maven_reload")
+
+-- Treesitter's Java indent queries compute the wrong level when pressing
+-- o / O / <CR> (often column 0 in half-typed code), so code only lined up
+-- after format-on-save. Fall back to Vim's built-in Java indenter
+-- (indent/java.vim), and use Java's conventional 4-space indent.
+vim.api.nvim_create_autocmd("FileType", {
+  group = vim.api.nvim_create_augroup("java_indent", { clear = true }),
+  pattern = "java",
+  callback = function(ev)
+    -- scheduled so it runs after LazyVim's own FileType hook sets the
+    -- treesitter indentexpr
+    vim.schedule(function()
+      if not vim.api.nvim_buf_is_valid(ev.buf) then
+        return
+      end
+      local bo = vim.bo[ev.buf]
+      bo.indentexpr = vim.fn.exists("*GetJavaIndent") == 1 and "GetJavaIndent()" or ""
+      bo.cindent = true
+      bo.shiftwidth = 4
+      bo.tabstop = 4
+      bo.softtabstop = 4
+    end)
+  end,
+})
